@@ -1,0 +1,90 @@
+@import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Sora:wght@300;400;500;600&display=swap');
+
+:root {
+  --ink-100: #0d1018;
+  --ink-80: #1f2430;
+  --ink-60: #3a4152;
+  --cloud-100: #f6f4f0;
+  --cloud-80: #e8e3dc;
+  --accent-100: #f4b860;
+  --accent-200: #e96a4b;
+  --accent-300: #1f9c89;
+  --accent-400: #d2a8ff;
+  --success: #1f9c89;
+  --danger: #e1554f;
+  --shadow: 0 24px 80px rgba(13, 16, 24, 0.18);
+  --radius-lg: 20px;
+  --radius-md: 14px;
+  --radius-sm: 10px;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html {
+  font-size: 16px;
+}
+
+body {
+  margin: 0;
+  font-family: 'Sora', sans-serif;
+  color: var(--ink-100);
+  background: radial-gradient(circle at top left, #f4f0e8 0%, #eae4dc 35%, #d4dbe7 100%);
+  min-height: 100vh;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+h1, h2, h3, h4 {
+  font-family: 'Space Grotesk', sans-serif;
+  margin: 0 0 0.5rem 0;
+}
+
+a {
+  text-decoration: none;
+  color: inherit;
+}
+
+button, input, select {
+  font-family: inherit;
+}
+
+.page-center {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+@media (max-width: 768px) {
+  html {
+    font-size: 15px;
+  }
+
+  h1, h2, h3, h4 {
+    margin-bottom: 0.4rem;
+  }
+}
+
+@media (max-width: 480px) {
+  html {
+    font-size: 14px;
+  }
+
+  h1 {
+    font-size: 20px;
+  }
+
+  h2 {
+    font-size: 18px;
+  }
+
+  h3 {
+    font-size: 16px;
+  }
+
+  h4 {
+    font-size: 14px;
+  }
+}
