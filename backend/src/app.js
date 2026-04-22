@@ -37,6 +37,14 @@ if (!mongoose.Model.cpopulate && mongoose.Model.populate) {
 app.use("/api", routes);
 app.use("/api/v1", routes);
 
+// Additional routes for specific modules (e.g. payroll)
+app.use("/api/deduction-types", require("./routes/deductionType.routes"));
+app.use(
+  "/api/employee-deductions",
+  require("./routes/employeeDeduction.routes"),
+);
+app.use("/api/payroll-runs", require("./routes/payrollRun.routes"));
+
 app.use(errorMiddleware);
 
 module.exports = app;

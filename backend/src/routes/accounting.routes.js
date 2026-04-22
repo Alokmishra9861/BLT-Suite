@@ -1,6 +1,10 @@
 const express = require("express");
 const router = express.Router();
 const ctrl = require("../controllers/accounting.controller");
+const autoAudit = require("../middlewares/autoAudit.middleware");
+const Account = require("../models/Account");
+const Journal = require("../models/Journal");
+const AccountingPeriod = require("../models/AccountingPeriod");
 
 // ── Middleware resolution ─────────────────────────────────────────────────────
 // Auto-adapts to different export patterns in your existing middleware files.
@@ -44,9 +48,31 @@ if (attachEntity) router.use(attachEntity);
 
 // ── Chart of Accounts ─────────────────────────────────────────────────────────
 router.get("/accounts", ctrl.listAccounts);
-router.post("/accounts", ctrl.createAccount);
-router.patch("/accounts/:accountId", ctrl.updateAccount);
-router.delete("/accounts/:accountId", ctrl.deleteAccount);
+router.post(
+  "/accounts",
+  autoAudit({ module: "accounting", resource: "Account", model: Account }),
+  ctrl.createAccount,
+);
+router.patch(
+  "/accounts/:accountId",
+  autoAudit({
+    module: "accounting",
+    resource: "Account",
+    model: Account,
+    idParam: "accountId",
+  }),
+  ctrl.updateAccount,
+);
+router.delete(
+  "/accounts/:accountId",
+  autoAudit({
+    module: "accounting",
+    resource: "Account",
+    model: Account,
+    idParam: "accountId",
+  }),
+  ctrl.deleteAccount,
+);
 
 // ── Account Balance & Ledger ──────────────────────────────────────────────────
 router.get("/accounts/:accountId/balance", ctrl.getAccountBalance);
@@ -54,16 +80,37 @@ router.get("/accounts/:accountId/ledger", ctrl.getAccountLedger);
 
 // ── Journal Entries ───────────────────────────────────────────────────────────
 router.get("/journals", ctrl.listJournals);
-router.post("/journals", ctrl.createJournal);
+router.post(
+  "/journals",
+  autoAudit({ module: "accounting", resource: "Journal", model: Journal }),
+  ctrl.createJournal,
+);
 router.get("/journals/:journalId", ctrl.getJournal);
-router.patch("/journals/:journalId", ctrl.updateJournal);
+router.patch(
+  "/journals/:journalId",
+  autoAudit({
+    module: "accounting",
+    resource: "Journal",
+    model: Journal,
+    idParam: "journalId",
+  }),
+  ctrl.updateJournal,
+);
 router.post("/journals/:journalId/post", ctrl.postJournal);
 router.post("/journals/:journalId/reverse", ctrl.reverseJournal);
 router.post("/journals/:journalId/void", ctrl.voidJournal);
 
 // ── Accounting Periods ────────────────────────────────────────────────────────
 router.get("/periods", ctrl.listPeriods);
-router.post("/periods", ctrl.createPeriod);
+router.post(
+  "/periods",
+  autoAudit({
+    module: "accounting",
+    resource: "AccountingPeriod",
+    model: AccountingPeriod,
+  }),
+  ctrl.createPeriod,
+);
 router.post("/periods/:period/close", ctrl.closePeriod);
 
 // ── Reports ───────────────────────────────────────────────────────────────────

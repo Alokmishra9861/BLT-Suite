@@ -19,6 +19,8 @@ const authMiddleware = async (req, res, next) => {
       return next(new ApiError(401, "Unauthorized"));
     }
 
+    // Ensure req.user.id is available for lean objects
+    user.id = user._id;
     req.user = user;
     return next();
   } catch (error) {

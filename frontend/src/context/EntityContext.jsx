@@ -54,7 +54,13 @@ export function EntityProvider({ children }) {
 
   return (
     <EntityContext.Provider
-      value={{ entities, currentEntity, switchEntity, loading }}
+      value={{
+        entities,
+        currentEntity,
+        entityId: currentEntity?._id || null,
+        switchEntity,
+        loading,
+      }}
     >
       {children}
     </EntityContext.Provider>

@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import {
   getAccounts,
   createAccount,
@@ -190,8 +190,8 @@ export default function ChartOfAccountsTab() {
             </thead>
             <tbody>
               {Object.entries(grouped).map(([type, accts]) => (
-                <>
-                  <tr key={`group-${type}`} className="accounting-group-row">
+                <React.Fragment key={`group-${type}`}>
+                  <tr className="accounting-group-row">
                     <td colSpan={6}>{type}s</td>
                   </tr>
                   {accts.map((a) => (
@@ -200,31 +200,35 @@ export default function ChartOfAccountsTab() {
                       <td className="is-strong">{a.name}</td>
                       <td>
                         <span
-                          className={`accounting-pill ${TYPE_COLORS[a.type]}`}
+                          className={`accounting-pill ${
+                            TYPE_COLORS[a.type] || "pill-default"
+                          }`}
                         >
                           {a.type}
                         </span>
                       </td>
-                      <td className="is-muted">{a.subType}</td>
+                      <td>{a.subType}</td>
                       <td className="is-center">
                         <span
-                          className={`accounting-status-dot ${
+                          className={`accounting-status ${
                             a.isActive ? "is-active" : "is-inactive"
                           }`}
-                          title={a.isActive ? "Active" : "Inactive"}
-                        />
+                        >
+                          {a.isActive ? "Active" : "Inactive"}
+                        </span>
                       </td>
                       <td className="is-right">
                         <button
+                          className="accounting-action-btn"
                           onClick={() => openEdit(a)}
-                          className="accounting-link"
+                          title="Edit"
                         >
                           Edit
                         </button>
                         {a.isActive && (
                           <button
                             onClick={() => handleDeactivate(a)}
-                            className="accounting-link is-danger"
+                            className="accounting-action-btn is-danger"
                           >
                             Deactivate
                           </button>
@@ -232,13 +236,12 @@ export default function ChartOfAccountsTab() {
                       </td>
                     </tr>
                   ))}
-                </>
+                </React.Fragment>
               ))}
               {accounts.length === 0 && (
                 <tr>
                   <td colSpan={6} className="accounting-empty">
-                    No accounts found. Run the seed or create your first
-                    account.
+                    No accounts found. Create your first account.
                   </td>
                 </tr>
               )}

@@ -10,6 +10,8 @@ const WorkPermit = require("../models/WorkPermit");
 const LeaveRequest = require("../models/LeaveRequest");
 const Benefit = require("../models/Benefit");
 const Termination = require("../models/Termination");
+const DeductionType = require("../models/DeductionType");
+const PayrollRun = require("../models/PayrollRun");
 const { ROLES } = require("../config/constants");
 
 const seed = async () => {
@@ -221,6 +223,110 @@ const seed = async () => {
         status: "processed",
         entityId: entity._id,
       },
+      { upsert: true, new: true, setDefaultsOnInsert: true },
+    );
+  }
+
+  // ── Seed Deduction Types ──────────────────────────────────────────────
+  const deductionTypes = [
+    {
+      name: "Pension Fund",
+      code: "PENSION",
+      category: "pension",
+      calcType: "percentage",
+      value: 5,
+      status: "active",
+      entityId: entity._id,
+    },
+    {
+      name: "Health Insurance",
+      code: "HEALTH",
+      category: "insurance",
+      calcType: "fixed",
+      value: 500,
+      status: "active",
+      entityId: entity._id,
+    },
+    {
+      name: "Income Tax",
+      code: "INCOME_TAX",
+      category: "tax",
+      calcType: "percentage",
+      value: 12,
+      status: "active",
+      entityId: entity._id,
+    },
+    {
+      name: "Employee Loan",
+      code: "LOAN",
+      category: "loan",
+      calcType: "fixed",
+      value: 200,
+      status: "active",
+      entityId: entity._id,
+    },
+  ];
+
+  for (const dedType of deductionTypes) {
+    await DeductionType.findOneAndUpdate(
+      { code: dedType.code, entityId: entity._id },
+      dedType,
+      { upsert: true, new: true, setDefaultsOnInsert: true },
+    );
+  }
+
+  // ── Seed Payroll Runs ─────────────────────────────────────────────────
+  const payrollRuns = [
+    {
+      entityId: entity._id,
+      periodType: "semimonthly",
+      periodStart: new Date("2026-04-01"),
+      periodEnd: new Date("2026-04-15"),
+      payDate: new Date("2026-04-20"),
+      status: "draft",
+      notes: "April 1-15 payroll",
+      createdBy: "system",
+    },
+    {
+      entityId: entity._id,
+      periodType: "semimonthly",
+      periodStart: new Date("2026-03-16"),
+      periodEnd: new Date("2026-03-31"),
+      payDate: new Date("2026-04-05"),
+      status: "processed",
+      totalGrossPay: 85000,
+      totalDeductions: 15000,
+      totalNetPay: 70000,
+      processedAt: new Date("2026-04-02"),
+      notes: "March 16-31 payroll",
+      createdBy: "system",
+    },
+    {
+      entityId: entity._id,
+      periodType: "monthly",
+      periodStart: new Date("2026-03-01"),
+      periodEnd: new Date("2026-03-31"),
+      payDate: new Date("2026-04-10"),
+      status: "posted",
+      totalGrossPay: 170000,
+      totalDeductions: 30000,
+      totalNetPay: 140000,
+      processedAt: new Date("2026-04-02"),
+      postedAt: new Date("2026-04-05"),
+      jeRef: "JNL-2026-00042",
+      notes: "March full month payroll",
+      createdBy: "system",
+    },
+  ];
+
+  for (const run of payrollRuns) {
+    await PayrollRun.findOneAndUpdate(
+      {
+        entityId: run.entityId,
+        periodStart: run.periodStart,
+        periodEnd: run.periodEnd,
+      },
+      run,
       { upsert: true, new: true, setDefaultsOnInsert: true },
     );
   }

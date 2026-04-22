@@ -5,6 +5,8 @@ const {
   updateWorkPermit,
 } = require("../controllers/workPermit.controller");
 const authMiddleware = require("../middlewares/auth.middleware");
+const autoAudit = require("../middlewares/autoAudit.middleware");
+const WorkPermit = require("../models/WorkPermit");
 
 const { validateWorkPermit } = require("../validators/hr.validator");
 
@@ -15,8 +17,21 @@ router.use(authMiddleware);
 router
   .route("/")
   .get(getWorkPermits)
-  .post(validateWorkPermit, createWorkPermit);
+  .post(
+    autoAudit({ module: "hr", resource: "WorkPermit", model: WorkPermit }),
+    validateWorkPermit,
+    createWorkPermit,
+  );
 
-router.route("/:id").put(validateWorkPermit, updateWorkPermit);
+router.route("/:id").put(
+  autoAudit({
+    module: "hr",
+    resource: "WorkPermit",
+    model: WorkPermit,
+    idParam: "id",
+  }),
+  validateWorkPermit,
+  updateWorkPermit,
+);
 
 module.exports = router;
