@@ -1,22 +1,46 @@
-export default function AuditSummaryCards({ logs }) {
-  const total = logs.length;
-  const creates = logs.filter((l) => l.action === "create").length;
-  const updates = logs.filter((l) => l.action === "update").length;
-  const deletes = logs.filter((l) => l.action === "delete").length;
-
+export default function AuditSummaryCards({ summary }) {
   const cards = [
-    { label: "Total Logs", value: total },
-    { label: "Created", value: creates },
-    { label: "Updated", value: updates },
-    { label: "Deleted", value: deletes },
+    {
+      label: "Total Logs",
+      value: summary.total,
+      subtext: "All tracked events",
+    },
+    {
+      label: "Creates",
+      value: summary.creates,
+      subtext: "New records created",
+    },
+    {
+      label: "Updates",
+      value: summary.updates,
+      subtext: "Records modified",
+    },
+    {
+      label: "Deletes",
+      value: summary.deletes,
+      subtext: "Removed or deactivated",
+    },
+    {
+      label: "Views",
+      value: summary.views,
+      subtext: "Read-only access events",
+    },
   ];
 
   return (
-    <div className="grid grid-cols-1 gap-4 md:grid-cols-4">
-      {cards.map((c) => (
-        <div key={c.label} className="rounded-2xl border p-4 bg-white shadow">
-          <p className="text-xs text-slate-400">{c.label}</p>
-          <h3 className="text-xl font-bold">{c.value}</h3>
+    <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-5">
+      {cards.map((card) => (
+        <div
+          key={card.label}
+          className="rounded-[24px] border border-slate-200 bg-white p-5 shadow-sm"
+        >
+          <p className="text-xs font-semibold uppercase tracking-[0.22em] text-slate-400">
+            {card.label}
+          </p>
+          <h3 className="mt-3 text-2xl font-bold text-slate-900">
+            {card.value}
+          </h3>
+          <p className="mt-2 text-sm text-slate-500">{card.subtext}</p>
         </div>
       ))}
     </div>
