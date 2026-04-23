@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import ChartOfAccountsTab from "./ChartOfAccountsTab";
+import ChartOfAccountsTab from "./ChartofAccountsTab";
 import JournalsTab from "./JournalsTab";
 import LedgerTab from "./LedgerTab";
 import { getJournals, getAccounts } from "../../services/accounting.service";
