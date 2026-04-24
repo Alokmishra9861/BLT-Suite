@@ -40,6 +40,32 @@ export function EntityProvider({ children }) {
     load();
   }, []);
 
+  // Exposed function to refresh entities on demand
+  const fetchEntities = async () => {
+    try {
+      setLoading(true);
+      const list = (await getEntities()) || [];
+      setEntities(list);
+
+      // Keep current selection if possible, otherwise pick first
+      const savedId = localStorage.getItem("entityId");
+      const saved = savedId ? list.find((e) => e._id === savedId) : null;
+      const active = saved || list[0] || null;
+
+      if (active) {
+        setCurrentEntity(active);
+        localStorage.setItem("entityId", active._id);
+      } else {
+        setCurrentEntity(null);
+        localStorage.removeItem("entityId");
+      }
+    } catch (err) {
+      console.error("Failed to fetch entities:", err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   // Persist entity ID whenever it changes
   useEffect(() => {
     if (currentEntity?._id) {
@@ -47,9 +73,29 @@ export function EntityProvider({ children }) {
     }
   }, [currentEntity]);
 
-  const switchEntity = (entity) => {
-    setCurrentEntity(entity);
-    localStorage.setItem("entityId", entity._id);
+  const switchEntity = (entityOrId) => {
+    if (!entityOrId) {
+      setCurrentEntity(null);
+      localStorage.removeItem("entityId");
+      return;
+    }
+
+    // Accept either an entity object or an id string
+    if (typeof entityOrId === "string") {
+      const found = entities.find((e) => e._id === entityOrId);
+      if (found) {
+        setCurrentEntity(found);
+        localStorage.setItem("entityId", found._id);
+        return;
+      }
+      // if not found, store id and wait for fetch to populate
+      localStorage.setItem("entityId", entityOrId);
+      setCurrentEntity(null);
+      return;
+    }
+
+    setCurrentEntity(entityOrId);
+    if (entityOrId._id) localStorage.setItem("entityId", entityOrId._id);
   };
 
   return (
@@ -60,6 +106,7 @@ export function EntityProvider({ children }) {
         entityId: currentEntity?._id || null,
         switchEntity,
         loading,
+        fetchEntities,
       }}
     >
       {children}
