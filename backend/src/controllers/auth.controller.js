@@ -3,8 +3,8 @@ const catchAsync = require("../utils/catchAsync");
 const authService = require("../services/auth.service");
 
 const login = catchAsync(async (req, res) => {
-  const { email, password } = req.body;
-  const { token, user } = await authService.login(email, password);
+  const { email, password, entityId } = req.body;
+  const { token, user } = await authService.login(email, password, entityId);
   res.json(
     new ApiResponse({ data: { token, user }, message: "Login successful" }),
   );

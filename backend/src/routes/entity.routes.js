@@ -11,12 +11,11 @@ const { ROLES } = require("../config/constants");
 
 const router = express.Router();
 
-router.get("/", authMiddleware, entityController.list);
+router.get("/", entityController.list);
 router.get("/:id", authMiddleware, entityController.getById);
 router.post(
   "/",
-  authMiddleware,
-  roleMiddleware([ROLES.SUPER_ADMIN, ROLES.ADMIN]),
+  // Allow public entity creation (signup flow). Creation still validates input.
   validate(createEntityValidator),
   entityController.create,
 );

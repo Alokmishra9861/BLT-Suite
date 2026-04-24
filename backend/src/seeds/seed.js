@@ -29,17 +29,102 @@ const seed = async () => {
     await Role.insertMany(rolesToCreate);
   }
 
-  let entity = await Entity.findOne({ code: "BLT-HQ" });
-  if (!entity) {
-    entity = await Entity.create({
-      name: "BLT International Group HQ",
-      code: "BLT-HQ",
+  // Create multiple entities and collect them
+  const entityDefs = [
+    {
+      name: "BLT International Group LLC",
+      code: "BLT",
       country: "AE",
       currency: "AED",
       timezone: "Asia/Dubai",
       active: true,
-    });
+    },
+    {
+      name: "Mall of Cayman",
+      code: "MC",
+      country: "KY",
+      currency: "KYD",
+      timezone: "America/Cayman",
+      active: true,
+    },
+    {
+      name: "CayEats",
+      code: "CE",
+      country: "KY",
+      currency: "KYD",
+      timezone: "America/Cayman",
+      active: true,
+    },
+    {
+      name: "CaySearch",
+      code: "CS",
+      country: "KY",
+      currency: "KYD",
+      timezone: "America/Cayman",
+      active: true,
+    },
+    {
+      name: "Cayman Home Page",
+      code: "CHP",
+      country: "KY",
+      currency: "KYD",
+      timezone: "America/Cayman",
+      active: true,
+    },
+    {
+      name: "Discount Club Cayman",
+      code: "DCC",
+      country: "KY",
+      currency: "KYD",
+      timezone: "America/Cayman",
+      active: true,
+    },
+    {
+      name: "CayBookMe",
+      code: "CB",
+      country: "KY",
+      currency: "KYD",
+      timezone: "America/Cayman",
+      active: true,
+    },
+    {
+      name: "CayVids",
+      code: "CV",
+      country: "KY",
+      currency: "KYD",
+      timezone: "America/Cayman",
+      active: true,
+    },
+    {
+      name: "CayMaintenance",
+      code: "CM",
+      country: "KY",
+      currency: "KYD",
+      timezone: "America/Cayman",
+      active: true,
+    },
+    {
+      name: "CayAuctions",
+      code: "CA",
+      country: "KY",
+      currency: "KYD",
+      timezone: "America/Cayman",
+      active: true,
+    },
+  ];
+
+  const entities = [];
+  for (const def of entityDefs) {
+    const e = await Entity.findOneAndUpdate(
+      { code: def.code },
+      { ...def },
+      { upsert: true, new: true, setDefaultsOnInsert: true },
+    );
+    entities.push(e);
   }
+
+  // pick the primary entity for demo sample data (BLT)
+  const primaryEntity = entities.find((e) => e.code === "BLT") || entities[0];
 
   const adminRole = await Role.findOne({ name: ROLES.SUPER_ADMIN });
   if (!adminRole) {
@@ -47,20 +132,18 @@ const seed = async () => {
   }
 
   const adminEmail = "admin@blt-suite.local";
-  const existingAdmin = await User.findOne({ email: adminEmail });
+  let adminUser = await User.findOne({ email: adminEmail });
 
-  if (!existingAdmin) {
-    await User.create({
+  if (!adminUser) {
+    adminUser = await User.create({
       name: "BLT Super Admin",
       email: adminEmail,
       password: "Admin123!@#",
       role: adminRole._id,
-      entityIds: [entity._id],
+      entityIds: entities.map((e) => e._id),
       isActive: true,
     });
   }
-
-  const adminUser = await User.findOne({ email: adminEmail });
 
   const hrDepartments = [
     {
@@ -72,16 +155,40 @@ const seed = async () => {
   ];
 
   for (const department of hrDepartments) {
-    await Department.findOneAndUpdate(
-      { entityId: entity._id, name: department.name },
-      { ...department, entityId: entity._id },
-      { upsert: true, new: true, setDefaultsOnInsert: true },
-    );
+    try {
+      await Department.findOneAndUpdate(
+        { entityId: primaryEntity._id, name: department.name },
+        { ...department, entityId: primaryEntity._id },
+        { upsert: true, new: true, setDefaultsOnInsert: true },
+      );
+    } catch (err) {
+      // If there's a unique index on `name` only, a duplicate key may occur when
+      // a department with the same name exists for another entity. In that case,
+      // log and continue without failing the whole seed.
+      if (err && err.code === 11000) {
+        console.warn(`Skipping department '${department.name}': duplicate key`);
+      } else {
+        throw err;
+      }
+    }
   }
 
-  const departments = await Department.find({ entityId: entity._id })
+  let departments = await Department.find({ entityId: primaryEntity._id })
     .sort({ name: 1 })
     .lean();
+
+  // If we couldn't create per-entity departments due to a global unique index,
+  // fall back to any existing departments with those names (global scope).
+  if (!departments.length) {
+    const found = [];
+    for (const d of hrDepartments) {
+      const f = await Department.findOne({ name: d.name }).lean();
+      if (f) found.push(f);
+    }
+    if (found.length) {
+      departments = found;
+    }
+  }
   const hrDepartment =
     departments.find((department) => department.name === "Human Resources") ||
     departments[0];
@@ -106,7 +213,7 @@ const seed = async () => {
       status: "active",
       salary: 95000,
       payType: "salary",
-      entityId: entity._id,
+      entityId: primaryEntity._id,
       hireDate: new Date("2024-04-01"),
       createdBy: adminUser._id,
     },
@@ -121,7 +228,7 @@ const seed = async () => {
       status: "active",
       salary: 72000,
       payType: "salary",
-      entityId: entity._id,
+      entityId: primaryEntity._id,
       hireDate: new Date("2024-06-10"),
       createdBy: adminUser._id,
     },
@@ -136,23 +243,40 @@ const seed = async () => {
       status: "terminated",
       salary: 88000,
       payType: "salary",
-      entityId: entity._id,
+      entityId: primaryEntity._id,
       hireDate: new Date("2023-09-15"),
       createdBy: adminUser._id,
     },
   ];
 
   for (const employee of sampleEmployees) {
-    await Employee.findOneAndUpdate(
-      { entityId: entity._id, email: employee.email },
-      employee,
-      { upsert: true, new: true, setDefaultsOnInsert: true },
-    );
+    try {
+      await Employee.findOneAndUpdate(
+        { entityId: primaryEntity._id, email: employee.email },
+        employee,
+        { upsert: true, new: true, setDefaultsOnInsert: true },
+      );
+    } catch (err) {
+      if (err && err.code === 11000) {
+        console.warn(`Skipping employee '${employee.email}': duplicate key`);
+      } else {
+        throw err;
+      }
+    }
   }
 
-  const seededEmployees = await Employee.find({ entityId: entity._id })
+  const sampleEmails = sampleEmployees.map((e) => e.email);
+  let seededEmployees = await Employee.find({ entityId: primaryEntity._id })
     .sort({ createdAt: 1 })
     .lean();
+
+  // If there are no per-entity employees (due to global unique constraints),
+  // fall back to fetching by email globally so we can attach related demo data.
+  if (!seededEmployees.length) {
+    seededEmployees = await Employee.find({ email: { $in: sampleEmails } })
+      .sort({ createdAt: 1 })
+      .lean();
+  }
   const ava = seededEmployees.find(
     (employee) => employee.email === "ava.morris@blt-suite.local",
   );
@@ -165,14 +289,14 @@ const seed = async () => {
 
   if (ava) {
     await WorkPermit.findOneAndUpdate(
-      { entityId: entity._id, permitNumber: "WP-2026-001" },
+      { entityId: primaryEntity._id, permitNumber: "WP-2026-001" },
       {
         employeeId: ava._id,
         permitNumber: "WP-2026-001",
         issueDate: new Date("2025-05-01"),
         expiryDate: new Date("2026-05-01"),
         status: "active",
-        entityId: entity._id,
+        entityId: primaryEntity._id,
       },
       { upsert: true, new: true, setDefaultsOnInsert: true },
     );
@@ -181,7 +305,7 @@ const seed = async () => {
   if (noah) {
     await LeaveRequest.findOneAndUpdate(
       {
-        entityId: entity._id,
+        entityId: primaryEntity._id,
         employeeId: noah._id,
         type: "vacation",
         startDate: new Date("2026-04-21"),
@@ -194,19 +318,19 @@ const seed = async () => {
         days: 5,
         reason: "Family travel",
         status: "pending",
-        entityId: entity._id,
+        entityId: primaryEntity._id,
       },
       { upsert: true, new: true, setDefaultsOnInsert: true },
     );
 
     await Benefit.findOneAndUpdate(
-      { entityId: entity._id, employeeId: noah._id, type: "insurance" },
+      { entityId: primaryEntity._id, employeeId: noah._id, type: "insurance" },
       {
         employeeId: noah._id,
         type: "insurance",
         amount: 1200,
         status: "active",
-        entityId: entity._id,
+        entityId: primaryEntity._id,
       },
       { upsert: true, new: true, setDefaultsOnInsert: true },
     );
@@ -214,14 +338,14 @@ const seed = async () => {
 
   if (mia) {
     await Termination.findOneAndUpdate(
-      { entityId: entity._id, employeeId: mia._id },
+      { entityId: primaryEntity._id, employeeId: mia._id },
       {
         employeeId: mia._id,
         terminationDate: new Date("2026-03-31"),
         reason: "Role restructure",
         severanceAmount: 15000,
         status: "processed",
-        entityId: entity._id,
+        entityId: primaryEntity._id,
       },
       { upsert: true, new: true, setDefaultsOnInsert: true },
     );
@@ -236,7 +360,7 @@ const seed = async () => {
       calcType: "percentage",
       value: 5,
       status: "active",
-      entityId: entity._id,
+      entityId: primaryEntity._id,
     },
     {
       name: "Health Insurance",
@@ -245,7 +369,7 @@ const seed = async () => {
       calcType: "fixed",
       value: 500,
       status: "active",
-      entityId: entity._id,
+      entityId: primaryEntity._id,
     },
     {
       name: "Income Tax",
@@ -254,7 +378,7 @@ const seed = async () => {
       calcType: "percentage",
       value: 12,
       status: "active",
-      entityId: entity._id,
+      entityId: primaryEntity._id,
     },
     {
       name: "Employee Loan",
@@ -263,13 +387,13 @@ const seed = async () => {
       calcType: "fixed",
       value: 200,
       status: "active",
-      entityId: entity._id,
+      entityId: primaryEntity._id,
     },
   ];
 
   for (const dedType of deductionTypes) {
     await DeductionType.findOneAndUpdate(
-      { code: dedType.code, entityId: entity._id },
+      { code: dedType.code, entityId: primaryEntity._id },
       dedType,
       { upsert: true, new: true, setDefaultsOnInsert: true },
     );
@@ -278,7 +402,7 @@ const seed = async () => {
   // ── Seed Payroll Runs ─────────────────────────────────────────────────
   const payrollRuns = [
     {
-      entityId: entity._id,
+      entityId: primaryEntity._id,
       periodType: "semimonthly",
       periodStart: new Date("2026-04-01"),
       periodEnd: new Date("2026-04-15"),
@@ -288,7 +412,7 @@ const seed = async () => {
       createdBy: "system",
     },
     {
-      entityId: entity._id,
+      entityId: primaryEntity._id,
       periodType: "semimonthly",
       periodStart: new Date("2026-03-16"),
       periodEnd: new Date("2026-03-31"),
@@ -302,7 +426,7 @@ const seed = async () => {
       createdBy: "system",
     },
     {
-      entityId: entity._id,
+      entityId: primaryEntity._id,
       periodType: "monthly",
       periodStart: new Date("2026-03-01"),
       periodEnd: new Date("2026-03-31"),

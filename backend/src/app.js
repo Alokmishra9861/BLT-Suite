@@ -8,6 +8,8 @@ const mongoose = require("mongoose");
 const routes = require("./routes");
 const errorMiddleware = require("./middlewares/error.middleware");
 
+const entityMiddleware = require("./middlewares/entity.middleware");
+
 require("./models/Role");
 require("./models/Entity");
 require("./models/User");
@@ -35,6 +37,8 @@ if (!mongoose.Model.cpopulate && mongoose.Model.populate) {
 }
 
 app.use("/api", routes);
+// Apply entity middleware to all /api/v1 routes (skips /auth/login inside middleware)
+app.use("/api/v1", entityMiddleware);
 app.use("/api/v1", routes);
 
 // Additional routes for specific modules (e.g. payroll)
