@@ -58,29 +58,29 @@ const LoginPage = () => {
         <h2>Welcome back</h2>
         <p>Sign in to manage entities, finance, and people operations.</p>
         <form onSubmit={handleSubmit}>
-            <FormField label="Entity">
-              <select
-                value={selectedEntity}
-                onChange={(e) => {
-                  const val = e.target.value;
-                  if (val === "__create__") {
-                    setShowCreateModal(true);
-                    return;
-                  }
-                  setSelectedEntity(val);
-                  if (val) localStorage.setItem("entityId", val);
-                  else localStorage.removeItem("entityId");
-                }}
-              >
-                <option value="">Select entity</option>
-                {entities.map((ent) => (
-                  <option key={ent._id} value={ent._id}>
-                    {ent.name || ent.name}
-                  </option>
-                ))}
-                <option value="__create__">+ Create New Entity</option>
-              </select>
-            </FormField>
+          <FormField label="Entity">
+            <select
+              value={selectedEntity}
+              onChange={(e) => {
+                const val = e.target.value;
+                if (val === "__create__") {
+                  setShowCreateModal(true);
+                  return;
+                }
+                setSelectedEntity(val);
+                if (val) localStorage.setItem("entityId", val);
+                else localStorage.removeItem("entityId");
+              }}
+            >
+              <option value="">Select entity</option>
+              {entities.map((ent) => (
+                <option key={ent._id} value={ent._id}>
+                  {ent.name || ent.name}
+                </option>
+              ))}
+              {/* <option value="__create__">+ Create New Entity</option> */}
+            </select>
+          </FormField>
           <FormField label="Email">
             <input
               type="email"
@@ -109,13 +109,17 @@ const LoginPage = () => {
             (() => {
               const ent = entities.find((e) => e._id === selectedEntity);
               if (ent) {
-                const code = ent.code || (ent.name || "").replace(/\s+/g, "-").toLowerCase();
+                const code =
+                  ent.code ||
+                  (ent.name || "").replace(/\s+/g, "-").toLowerCase();
                 const email = `admin+${code}@blt.com`;
                 const password = "Admin123!";
                 return (
                   <div>
                     <strong>Seed admin:</strong>
-                    <div>{email} / {password}</div>
+                    <div>
+                      {email} / {password}
+                    </div>
                   </div>
                 );
               }
@@ -126,7 +130,10 @@ const LoginPage = () => {
           )}
         </div>
         {showCreateModal && (
-          <CreateEntityModal isOpen={showCreateModal} onClose={() => setShowCreateModal(false)} />
+          <CreateEntityModal
+            isOpen={showCreateModal}
+            onClose={() => setShowCreateModal(false)}
+          />
         )}
       </div>
     </div>

@@ -2,6 +2,7 @@ import React, { useState, useEffect } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { billService } from "../../services/billService";
 import { vendorService } from "../../services/vendorService";
+import { getAccounts } from "../../services/accounting.service";
 import { useEntity } from "../../hooks/useEntity";
 import PageHeader from "../../components/common/PageHeader";
 import Button from "../../components/common/Button";
@@ -12,6 +13,7 @@ export const BillFormPage = () => {
   const { billId } = useParams();
   const { entityId } = useEntity();
   const [vendors, setVendors] = useState([]);
+  const [accounts, setAccounts] = useState([]);
   const [loading, setLoading] = useState(!billId);
   const [formError, setFormError] = useState("");
   const [formData, setFormData] = useState({
@@ -31,10 +33,15 @@ export const BillFormPage = () => {
   useEffect(() => {
     const load = async () => {
       try {
-        const vendorsData = await vendorService.getVendors(entityId, {
-          limit: 999,
-        });
+        const [vendorsData, accountsResponse] = await Promise.all([
+          vendorService.getVendors(entityId, { limit: 999 }),
+          getAccounts(),
+        ]);
         setVendors(vendorsData.vendors);
+        // Properly destructure the accounts response
+        const accountsList =
+          accountsResponse?.data?.data || accountsResponse?.data || [];
+        setAccounts(Array.isArray(accountsList) ? accountsList : []);
 
         if (billId && billId !== "new") {
           const bill = await billService.getBill(entityId, billId);
@@ -42,6 +49,7 @@ export const BillFormPage = () => {
         }
       } catch (err) {
         console.error("Error loading data:", err);
+        setAccounts([]);
       } finally {
         setLoading(false);
       }
@@ -191,11 +199,26 @@ export const BillFormPage = () => {
           />
         </div>
 
-        <FormField
-          label="Category"
-          value={formData.category}
-          onChange={(value) => setFormData({ ...formData, category: value })}
-        />
+        <div className="mb-6">
+          <label className="block text-sm font-medium text-gray-700 mb-2">
+            Account
+          </label>
+          <select
+            value={formData.category}
+            onChange={(e) =>
+              setFormData({ ...formData, category: e.target.value })
+            }
+            className="w-full px-4 py-2 border rounded-lg"
+            style={{ borderColor: "#d1d5db", minHeight: "40px" }}
+          >
+            <option value="">Select account...</option>
+            {accounts.map((account) => (
+              <option key={account._id} value={account._id}>
+                {account.code} - {account.name}
+              </option>
+            ))}
+          </select>
+        </div>
 
         <div className="mb-6">
           <h3 className="text-lg font-semibold text-gray-900 mb-4">

@@ -26,7 +26,7 @@ const EntitySwitcher = () => {
             {entity.name}
           </option>
         ))}
-        {/* <option value="__create__">+ Create New Entity</option> */}
+        <option value="__create__">+ Create New Entity</option>
       </select>
 
       <CreateEntityModal isOpen={showModal} onClose={() => setShowModal(false)} />
