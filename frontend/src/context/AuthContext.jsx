@@ -48,15 +48,17 @@ export const AuthProvider = ({ children }) => {
     loadProfile();
   }, [loadProfile]);
 
-  const login = async (email, password) => {
+  const login = async (email, password, entityId) => {
     const { token: newToken, user: newUser } = await authService.login(
       email,
       password,
+      entityId,
     );
     setToken(newToken);
     setUser(newUser);
     localStorage.setItem("blt_token", newToken);
     localStorage.setItem("blt_user", JSON.stringify(newUser));
+    if (entityId) localStorage.setItem("entityId", entityId);
     navigate("/dashboard");
   };
 

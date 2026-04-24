@@ -21,6 +21,8 @@ const authMiddleware = async (req, res, next) => {
 
     // Ensure req.user.id is available for lean objects
     user.id = user._id;
+    // propagate entityId from token if present
+    if (payload.entityId) user.entityId = payload.entityId;
     req.user = user;
     return next();
   } catch (error) {
