@@ -2,7 +2,7 @@ import React, { useState, useEffect } from "react";
 import { useAuth } from "../../hooks/useAuth.js";
 import Button from "../../components/common/Button.jsx";
 import FormField from "../../components/common/FormField.jsx";
-import { getEntities } from "../../services/entity.service.js";
+import { getEntitiesPublic } from "../../services/entity.service.js";
 import CreateEntityModal from "../../components/common/CreateEntityModal.jsx";
 
 const LoginPage = () => {
@@ -20,7 +20,7 @@ const LoginPage = () => {
   useEffect(() => {
     const load = async () => {
       try {
-        const list = await getEntities();
+        const list = await getEntitiesPublic();
         setEntities(list || []);
         // ensure saved selection exists in list
         const saved = localStorage.getItem("entityId");
@@ -87,6 +87,7 @@ const LoginPage = () => {
               value={email}
               onChange={(event) => setEmail(event.target.value)}
               placeholder="name@company.com"
+              autoComplete="email"
               required
             />
           </FormField>
@@ -96,6 +97,7 @@ const LoginPage = () => {
               value={password}
               onChange={(event) => setPassword(event.target.value)}
               placeholder="••••••••"
+              autoComplete="current-password"
               required
             />
           </FormField>

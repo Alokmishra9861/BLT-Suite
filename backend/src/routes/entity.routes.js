@@ -1,30 +1,19 @@
 const express = require("express");
-const entityController = require("../controllers/entity.controller");
+const controller = require("../controllers/entity.controller");
 const authMiddleware = require("../middlewares/auth.middleware");
-const roleMiddleware = require("../middlewares/role.middleware");
-const validate = require("../middlewares/validate.middleware");
-const {
-  createEntityValidator,
-  updateEntityValidator,
-} = require("../validators/entity.validator");
-const { ROLES } = require("../config/constants");
 
 const router = express.Router();
 
-router.get("/", entityController.list);
-router.get("/:id", authMiddleware, entityController.getById);
-router.post(
-  "/",
-  // Allow public entity creation (signup flow). Creation still validates input.
-  validate(createEntityValidator),
-  entityController.create,
-);
-router.patch(
-  "/:id",
-  authMiddleware,
-  roleMiddleware([ROLES.SUPER_ADMIN, ROLES.ADMIN]),
-  validate(updateEntityValidator),
-  entityController.update,
-);
+// Public route — returns only _id, name, code for the login page dropdown
+router.get("/public", controller.getEntitiesPublic);
+
+router.use(authMiddleware);
+
+router.get("/tree", controller.getEntityTree);
+router.post("/", controller.createEntity);
+router.get("/", controller.getEntities);
+router.get("/:id", controller.getEntityById);
+router.put("/:id", controller.updateEntity);
+router.delete("/:id", controller.deactivateEntity);
 
 module.exports = router;

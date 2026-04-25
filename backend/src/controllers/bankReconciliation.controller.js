@@ -1,11 +1,15 @@
 const bankReconciliationService = require("../services/bankReconciliation.service");
+const {
+  getSelectedEntityId,
+  ensureCanCreateOperationalRecord,
+} = require("../utils/entityScope.util");
 
-const getEntityId = (req) =>
-  req.entity?._id || req.user?.entity || req.body.entity || req.query.entity;
+const getEntityId = (req) => getSelectedEntityId(req);
 
 const createReconciliation = async (req, res, next) => {
   try {
     const entityId = getEntityId(req);
+    ensureCanCreateOperationalRecord(req);
 
     const data = await bankReconciliationService.createReconciliation(
       { ...req.body, entity: entityId },

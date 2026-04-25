@@ -2,17 +2,12 @@ const invoiceService = require("../services/invoice.service");
 const { auditWrap } = require("../utils/audit.util");
 const ApiResponse = require("../utils/ApiResponse");
 const catchAsync = require("../utils/catchAsync");
+const {
+  getSelectedEntityId,
+  ensureCanCreateOperationalRecord,
+} = require("../utils/entityScope.util");
 
-const getEntityId = (req) =>
-  req.entity?._id ||
-  req.entityId ||
-  req.params?.entityId ||
-  req.user?.entity ||
-  req.user?.entityId ||
-  req.body.entity ||
-  req.body.entityId ||
-  req.query.entity ||
-  req.query.entityId;
+const getEntityId = (req) => getSelectedEntityId(req);
 
 const getInvoices = catchAsync(async (req, res) => {
   const entityId = getEntityId(req);
@@ -55,6 +50,7 @@ const getInvoice = catchAsync(async (req, res) => {
 
 const createInvoiceHandler = async (req) => {
   const entityId = getEntityId(req);
+  ensureCanCreateOperationalRecord(req);
   return await invoiceService.createInvoice(entityId, req.body, req.user?._id);
 };
 

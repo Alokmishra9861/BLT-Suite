@@ -3,6 +3,7 @@ import ChartOfAccountsTab from "./ChartofAccountsTab";
 import JournalsTab from "./JournalsTab";
 import LedgerTab from "./LedgerTab";
 import { getJournals, getAccounts } from "../../services/accounting.service";
+import { useEntity } from "../../hooks/useEntity.js";
 
 const TABS = [
   { id: "coa", label: "Chart of Accounts" },
@@ -22,6 +23,7 @@ function KPI({ label, value, sub, accent }) {
 }
 
 export default function AccountingPage() {
+  const { selectedEntity } = useEntity();
   const [activeTab, setActiveTab] = useState("coa");
   const [stats, setStats] = useState({ accounts: 0, drafts: 0, posted: 0 });
 
@@ -49,6 +51,11 @@ export default function AccountingPage() {
           <h1 className="accounting-title">Accounting</h1>
           <p className="accounting-subtitle">
             Double-entry ledger · Journal engine · Trial balance
+          </p>
+          <p className="mt-1 text-xs font-medium text-slate-500">
+            {selectedEntity?.entityType === "parent"
+              ? "Showing records for selected entity only."
+              : "Showing records for selected entity only."}
           </p>
         </div>
       </div>

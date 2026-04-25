@@ -1,10 +1,14 @@
 const EmployeeDeduction = require("../models/EmployeeDeduction");
+const {
+  getSelectedEntityId,
+  ensureCanCreateOperationalRecord,
+} = require("../utils/entityScope.util");
 
 // GET /api/employee-deductions?entityId=xxx&employeeId=yyy
 exports.getAll = async (req, res, next) => {
   try {
-    const filter = {};
-    if (req.query.entityId) filter.entityId = req.query.entityId;
+    const entityId = getSelectedEntityId(req);
+    const filter = entityId ? { entityId } : {};
     if (req.query.employeeId) filter.employeeId = req.query.employeeId;
     const deductions = await EmployeeDeduction.find(filter)
       .populate("deductionTypeId", "name code category calcType value")
@@ -27,9 +31,10 @@ exports.create = async (req, res, next) => {
       startDate,
       endDate,
       status,
-      entityId,
     } = req.body;
-    if (!employeeId || !deductionTypeId || !startDate || !entityId) {
+    ensureCanCreateOperationalRecord(req);
+    const entityId = getSelectedEntityId(req);
+    if (!employeeId || !deductionTypeId || !startDate) {
       return res
         .status(400)
         .json({ success: false, message: "Missing required fields." });
@@ -57,8 +62,9 @@ exports.create = async (req, res, next) => {
 // PUT /api/employee-deductions/:id
 exports.update = async (req, res, next) => {
   try {
-    const deduction = await EmployeeDeduction.findByIdAndUpdate(
-      req.params.id,
+    const entityId = getSelectedEntityId(req);
+    const deduction = await EmployeeDeduction.findOneAndUpdate(
+      { _id: req.params.id, entityId },
       req.body,
       {
         new: true,
@@ -78,7 +84,11 @@ exports.update = async (req, res, next) => {
 // DELETE /api/employee-deductions/:id
 exports.remove = async (req, res, next) => {
   try {
-    const d = await EmployeeDeduction.findByIdAndDelete(req.params.id);
+    const entityId = getSelectedEntityId(req);
+    const d = await EmployeeDeduction.findOneAndDelete({
+      _id: req.params.id,
+      entityId,
+    });
     if (!d)
       return res.status(404).json({ success: false, message: "Not found." });
     res.json({ success: true, message: "Deleted." });

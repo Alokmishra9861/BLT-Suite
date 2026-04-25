@@ -1,11 +1,15 @@
 const bankAccountService = require("../services/bankAccount.service");
 const { auditWrap } = require("../utils/audit.util");
+const {
+  getSelectedEntityId,
+  ensureCanCreateOperationalRecord,
+} = require("../utils/entityScope.util");
 
-const getEntityId = (req) =>
-  req.entity?._id || req.user?.entity || req.body.entity || req.query.entity;
+const getEntityId = (req) => getSelectedEntityId(req);
 
 const createBankAccountHandler = async (req) => {
   const entityId = getEntityId(req);
+  ensureCanCreateOperationalRecord(req);
 
   return await bankAccountService.createBankAccount(
     { ...req.body, entity: entityId },

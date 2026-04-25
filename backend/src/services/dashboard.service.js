@@ -1,17 +1,21 @@
 const Entity = require("../models/Entity");
 const User = require("../models/User");
 const Role = require("../models/Role");
+const entityService = require("./entity.service");
 
 const getSummary = async (entityId) => {
+  // Resolve hierarchy — include selected entity + all descendants
+  const entityIds = await entityService.getDescendantEntityIds(entityId);
+
   const [entity, totalEntities, activeEntities, activeUsers, totalRoles, entityUsers, latestEntities, latestUsers] = await Promise.all([
     Entity.findById(entityId).lean(),
     Entity.countDocuments(),
-    Entity.countDocuments({ active: true }),
+    Entity.countDocuments({ status: "active" }),
     User.countDocuments({ isActive: true }),
     Role.countDocuments(),
-    User.countDocuments({ isActive: true, entityIds: entityId }),
-    Entity.find({}).sort({ createdAt: -1 }).limit(3).lean(),
-    User.find({ isActive: true, entityIds: entityId })
+    User.countDocuments({ isActive: true, entityIds: { $in: entityIds } }),
+    Entity.find({ _id: { $in: entityIds } }).sort({ createdAt: -1 }).limit(3).lean(),
+    User.find({ isActive: true, entityIds: { $in: entityIds } })
       .select("name email createdAt")
       .sort({ createdAt: -1 })
       .limit(3)
@@ -44,8 +48,12 @@ const getSummary = async (entityId) => {
     alerts.push(`Most recent entity: ${latestEntities[0].name}`);
   }
 
+  const isGroupView = entityIds.length > 1;
+
   return {
     entityId,
+    entityIds,
+    isGroupView,
     entity: entity
       ? {
           id: entity._id,
@@ -53,19 +61,21 @@ const getSummary = async (entityId) => {
           code: entity.code,
           currency: entity.currency,
           country: entity.country,
-          active: entity.active,
+          status: entity.status,
+          entityType: entity.entityType,
+          isHoldingEntity: entity.isHoldingEntity,
         }
       : null,
     kpis: [
       {
         key: "active_entities",
-        label: "Active Entities",
-        value: activeEntities,
+        label: isGroupView ? "Group Entities" : "Active Entities",
+        value: isGroupView ? entityIds.length : activeEntities,
         trend: `${totalEntities} total entities`,
       },
       {
         key: "entity_users",
-        label: "Users in Entity",
+        label: isGroupView ? "Group Users" : "Users in Entity",
         value: entityUsers,
         trend: `${activeUsers} active users overall`,
       },
@@ -77,7 +87,7 @@ const getSummary = async (entityId) => {
       },
       {
         key: "current_entity",
-        label: "Current Entity",
+        label: isGroupView ? "Group" : "Current Entity",
         value: entity ? entity.name : "Unknown entity",
         trend: entity ? entity.code : "No entity found",
       },

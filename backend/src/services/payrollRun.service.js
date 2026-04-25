@@ -18,12 +18,17 @@ const { buildPayrollLine, round2 } = require("./payrollCalculation.service");
  *  4. Build payroll lines
  *  5. Save lines + update run totals + set status = 'processed'
  */
-async function processPayrollRun(runId) {
+async function processPayrollRun(runId, entityId) {
   const run = await PayrollRun.findById(runId);
   if (!run)
     throw Object.assign(new Error("Payroll run not found"), {
       statusCode: 404,
     });
+  if (entityId && String(run.entityId) !== String(entityId)) {
+    throw Object.assign(new Error("Payroll run not found"), {
+      statusCode: 404,
+    });
+  }
   if (run.status !== "draft") {
     throw Object.assign(
       new Error(
@@ -96,12 +101,17 @@ async function processPayrollRun(runId) {
  *  2. Optionally create a journal entry stub (plug-in point for accounting module)
  *  3. Lock the run as posted
  */
-async function postPayrollRun(runId) {
+async function postPayrollRun(runId, entityId) {
   const run = await PayrollRun.findById(runId);
   if (!run)
     throw Object.assign(new Error("Payroll run not found"), {
       statusCode: 404,
     });
+  if (entityId && String(run.entityId) !== String(entityId)) {
+    throw Object.assign(new Error("Payroll run not found"), {
+      statusCode: 404,
+    });
+  }
   if (run.status !== "processed") {
     throw Object.assign(
       new Error(

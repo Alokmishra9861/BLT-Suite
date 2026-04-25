@@ -2,9 +2,13 @@ const Benefit = require("../models/Benefit");
 const ApiResponse = require("../utils/ApiResponse");
 const catchAsync = require("../utils/catchAsync");
 const ApiError = require("../utils/ApiError");
+const {
+  getSelectedEntityId,
+  ensureCanCreateOperationalRecord,
+} = require("../utils/entityScope.util");
 
 const getBenefits = catchAsync(async (req, res) => {
-  const { entityId } = req.params;
+  const entityId = getSelectedEntityId(req);
   const { page = 1, limit = 10, employeeId, type } = req.query;
 
   const query = { entityId };
@@ -33,7 +37,8 @@ const getBenefits = catchAsync(async (req, res) => {
 });
 
 const createBenefit = catchAsync(async (req, res) => {
-  const { entityId } = req.params;
+  const entityId = getSelectedEntityId(req);
+  ensureCanCreateOperationalRecord(req);
   const benefitData = { ...req.body, entityId };
 
   const benefit = await Benefit.create(benefitData);
@@ -49,9 +54,14 @@ const createBenefit = catchAsync(async (req, res) => {
 
 const updateBenefit = catchAsync(async (req, res) => {
   const { id } = req.params;
-  const benefit = await Benefit.findByIdAndUpdate(id, req.body, {
-    new: true,
-  }).populate("employeeId", "firstName lastName");
+  const entityId = getSelectedEntityId(req);
+  const benefit = await Benefit.findOneAndUpdate(
+    { _id: id, entityId },
+    req.body,
+    {
+      new: true,
+    },
+  ).populate("employeeId", "firstName lastName");
   if (!benefit) throw new ApiError(404, "Benefit not found");
 
   res.status(200).json(

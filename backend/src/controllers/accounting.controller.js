@@ -2,21 +2,19 @@ const accountingService = require("../services/accounting.service");
 const catchAsync = require("../utils/catchAsync");
 const ApiResponse = require("../utils/ApiResponse");
 const ApiError = require("../utils/ApiError");
+const {
+  getSelectedEntityId,
+  ensureCanCreateOperationalRecord,
+} = require("../utils/entityScope.util");
 
 // ── Helper: resolve entity ID from the request ────────────────────────────────
-// Supports req.entityId (set by entity middleware) OR req.user.entityId (JWT payload)
 function resolveEntityId(req) {
-  const id =
-    req.entityId ||
-    req.user?.entityId ||
-    req.user?.entity ||
-    req.headers["x-entity-id"];
+  const id = getSelectedEntityId(req);
 
   if (!id) {
     throw new ApiError(
       400,
-      "Entity context is missing. Make sure x-entity-id header is sent, " +
-        "or your entity middleware sets req.entityId.",
+      "Entity context is missing. Make sure x-entity-id header is sent and entity middleware runs first.",
     );
   }
   return id;
@@ -40,6 +38,7 @@ const listAccounts = catchAsync(async (req, res) => {
 
 const createAccount = catchAsync(async (req, res) => {
   const entityId = resolveEntityId(req);
+  ensureCanCreateOperationalRecord(req);
   const account = await accountingService.createAccount(
     entityId,
     req.body,
@@ -111,6 +110,7 @@ const getJournal = catchAsync(async (req, res) => {
 
 const createJournal = catchAsync(async (req, res) => {
   const entityId = resolveEntityId(req);
+  ensureCanCreateOperationalRecord(req);
   const journal = await accountingService.createJournal(
     entityId,
     req.body,
@@ -177,6 +177,7 @@ const listPeriods = catchAsync(async (req, res) => {
 
 const createPeriod = catchAsync(async (req, res) => {
   const entityId = resolveEntityId(req);
+  ensureCanCreateOperationalRecord(req);
   const period = await accountingService.createPeriod(
     entityId,
     req.body,

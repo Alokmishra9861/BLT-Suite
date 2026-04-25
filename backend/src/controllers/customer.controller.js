@@ -1,9 +1,13 @@
 const CustomerService = require("../services/customer.service");
 const ApiResponse = require("../utils/ApiResponse");
 const catchAsync = require("../utils/catchAsync");
+const {
+  getSelectedEntityId,
+  ensureCanCreateOperationalRecord,
+} = require("../utils/entityScope.util");
 
 const getCustomers = catchAsync(async (req, res) => {
-  const { entityId } = req;
+  const entityId = getSelectedEntityId(req);
   const { page, limit, search, status } = req.query;
 
   const data = await CustomerService.getCustomers(entityId, {
@@ -22,7 +26,8 @@ const getCustomers = catchAsync(async (req, res) => {
 });
 
 const createCustomer = catchAsync(async (req, res) => {
-  const { entityId } = req;
+  const entityId = getSelectedEntityId(req);
+  ensureCanCreateOperationalRecord(req);
   const userId = req.user._id || req.user.id;
 
   const customer = await CustomerService.createCustomer(
@@ -40,7 +45,7 @@ const createCustomer = catchAsync(async (req, res) => {
 });
 
 const getCustomer = catchAsync(async (req, res) => {
-  const { entityId } = req;
+  const entityId = getSelectedEntityId(req);
   const { customerId } = req.params;
 
   const customer = await CustomerService.getCustomerById(customerId, entityId);
@@ -54,7 +59,7 @@ const getCustomer = catchAsync(async (req, res) => {
 });
 
 const updateCustomer = catchAsync(async (req, res) => {
-  const { entityId } = req;
+  const entityId = getSelectedEntityId(req);
   const { customerId } = req.params;
   const userId = req.user._id || req.user.id;
 
@@ -74,7 +79,7 @@ const updateCustomer = catchAsync(async (req, res) => {
 });
 
 const deleteCustomer = catchAsync(async (req, res) => {
-  const { entityId } = req;
+  const entityId = getSelectedEntityId(req);
   const { customerId } = req.params;
 
   await CustomerService.deleteCustomer(customerId, entityId);

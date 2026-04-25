@@ -1,9 +1,13 @@
 const VendorService = require("../services/vendor.service");
 const ApiResponse = require("../utils/ApiResponse");
 const catchAsync = require("../utils/catchAsync");
+const {
+  getSelectedEntityId,
+  ensureCanCreateOperationalRecord,
+} = require("../utils/entityScope.util");
 
 const getVendors = catchAsync(async (req, res) => {
-  const { entityId } = req;
+  const entityId = getSelectedEntityId(req);
   const { page, limit, search, status } = req.query;
 
   const data = await VendorService.getVendors(entityId, {
@@ -22,7 +26,8 @@ const getVendors = catchAsync(async (req, res) => {
 });
 
 const createVendor = catchAsync(async (req, res) => {
-  const { entityId } = req;
+  const entityId = getSelectedEntityId(req);
+  ensureCanCreateOperationalRecord(req);
   const userId = req.user._id || req.user.id;
 
   const vendor = await VendorService.createVendor(entityId, req.body, userId);
@@ -36,7 +41,7 @@ const createVendor = catchAsync(async (req, res) => {
 });
 
 const getVendor = catchAsync(async (req, res) => {
-  const { entityId } = req;
+  const entityId = getSelectedEntityId(req);
   const { vendorId } = req.params;
 
   const vendor = await VendorService.getVendorById(vendorId, entityId);
@@ -50,7 +55,7 @@ const getVendor = catchAsync(async (req, res) => {
 });
 
 const updateVendor = catchAsync(async (req, res) => {
-  const { entityId } = req;
+  const entityId = getSelectedEntityId(req);
   const { vendorId } = req.params;
   const userId = req.user._id || req.user.id;
 
@@ -70,7 +75,7 @@ const updateVendor = catchAsync(async (req, res) => {
 });
 
 const deleteVendor = catchAsync(async (req, res) => {
-  const { entityId } = req;
+  const entityId = getSelectedEntityId(req);
   const { vendorId } = req.params;
 
   await VendorService.deleteVendor(vendorId, entityId);

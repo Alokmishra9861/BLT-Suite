@@ -2,9 +2,13 @@ const WorkPermit = require("../models/WorkPermit");
 const ApiResponse = require("../utils/ApiResponse");
 const catchAsync = require("../utils/catchAsync");
 const ApiError = require("../utils/ApiError");
+const {
+  getSelectedEntityId,
+  ensureCanCreateOperationalRecord,
+} = require("../utils/entityScope.util");
 
 const getWorkPermits = catchAsync(async (req, res) => {
-  const { entityId } = req.params;
+  const entityId = getSelectedEntityId(req);
   const { page = 1, limit = 10, employeeId } = req.query;
 
   const query = { entityId };
@@ -32,7 +36,8 @@ const getWorkPermits = catchAsync(async (req, res) => {
 });
 
 const createWorkPermit = catchAsync(async (req, res) => {
-  const { entityId } = req.params;
+  const entityId = getSelectedEntityId(req);
+  ensureCanCreateOperationalRecord(req);
   const workPermitData = { ...req.body, entityId };
 
   const workPermit = await WorkPermit.create(workPermitData);
@@ -48,9 +53,14 @@ const createWorkPermit = catchAsync(async (req, res) => {
 
 const updateWorkPermit = catchAsync(async (req, res) => {
   const { id } = req.params;
-  const workPermit = await WorkPermit.findByIdAndUpdate(id, req.body, {
-    new: true,
-  }).populate("employeeId", "firstName lastName");
+  const entityId = getSelectedEntityId(req);
+  const workPermit = await WorkPermit.findOneAndUpdate(
+    { _id: id, entityId },
+    req.body,
+    {
+      new: true,
+    },
+  ).populate("employeeId", "firstName lastName");
   if (!workPermit) throw new ApiError(404, "Work permit not found");
 
   res.status(200).json(

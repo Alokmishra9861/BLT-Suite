@@ -1,4 +1,12 @@
+import { useEntity } from "../../hooks/useEntity.js";
+
 export default function ReportsHeader() {
+  const { selectedEntity } = useEntity();
+  const scopeText =
+    selectedEntity?.entityType === "parent"
+      ? "Showing consolidated data for this parent and all subsidiaries."
+      : "Showing data for selected entity only.";
+
   return (
     <div className="rounded-[28px] border border-slate-200 bg-gradient-to-br from-white via-slate-50 to-slate-100 p-6 shadow-sm">
       <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
@@ -13,6 +21,7 @@ export default function ReportsHeader() {
             View financial and HR reports powered by real backend data with a
             cleaner, premium reporting experience.
           </p>
+          <p className="mt-3 text-sm font-medium text-slate-600">{scopeText}</p>
         </div>
 
         <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">

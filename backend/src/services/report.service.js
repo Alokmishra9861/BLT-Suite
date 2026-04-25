@@ -3,6 +3,7 @@ const Account = require("../models/Account");
 const Employee = require("../models/Employee");
 const LeaveRequest = require("../models/LeaveRequest");
 const PayrollRun = require("../models/PayrollRun");
+const entityService = require("./entity.service");
 
 const normalizeDateRange = (from, to) => {
   const start = from ? new Date(from) : new Date("2000-01-01");
@@ -14,11 +15,30 @@ const normalizeDateRange = (from, to) => {
   return { start, end };
 };
 
-const getPostedJournals = async (entityId, from, to) => {
+/**
+ * Resolve a single entityId (or array) into an array usable
+ * in a `{ $in: [...] }` MongoDB query. When the caller passes
+ * a single ID we still wrap it in an array for consistent code.
+ */
+const toEntityArray = (entityIdOrIds) => {
+  if (Array.isArray(entityIdOrIds)) return entityIdOrIds;
+  return [entityIdOrIds];
+};
+
+const resolveScopedEntityIds = async (entityIdOrIds) => {
+  if (Array.isArray(entityIdOrIds)) {
+    return entityIdOrIds;
+  }
+
+  return entityService.getDescendantEntityIds(entityIdOrIds);
+};
+
+const getPostedJournals = async (entityIds, from, to) => {
   const { start, end } = normalizeDateRange(from, to);
+  const ids = toEntityArray(entityIds);
 
   const journals = await Journal.find({
-    entity: entityId,
+    entity: { $in: ids },
     status: { $in: ["posted", "Posted", "POSTED"] },
     date: { $gte: start, $lte: end },
   }).lean();
@@ -26,8 +46,10 @@ const getPostedJournals = async (entityId, from, to) => {
   return journals;
 };
 
-const buildAccountMap = async (entityId) => {
-  const accounts = await Account.find({ entity: entityId }).lean();
+const buildAccountMap = async (entityIds) => {
+  const ids = toEntityArray(entityIds);
+
+  const accounts = await Account.find({ entity: { $in: ids } }).lean();
 
   const map = new Map();
   accounts.forEach((acc) => {
@@ -40,9 +62,10 @@ const buildAccountMap = async (entityId) => {
   };
 };
 
-const calculateTrialBalance = async (entityId, from, to) => {
-  const journals = await getPostedJournals(entityId, from, to);
-  const { accounts, accountMap } = await buildAccountMap(entityId);
+const calculateTrialBalance = async (entityIds, from, to) => {
+  const scopedEntityIds = await resolveScopedEntityIds(entityIds);
+  const journals = await getPostedJournals(scopedEntityIds, from, to);
+  const { accounts, accountMap } = await buildAccountMap(scopedEntityIds);
 
   const balances = {};
 
@@ -100,9 +123,10 @@ const calculateTrialBalance = async (entityId, from, to) => {
   };
 };
 
-const calculateProfitAndLoss = async (entityId, from, to) => {
-  const journals = await getPostedJournals(entityId, from, to);
-  const { accounts, accountMap } = await buildAccountMap(entityId);
+const calculateProfitAndLoss = async (entityIds, from, to) => {
+  const scopedEntityIds = await resolveScopedEntityIds(entityIds);
+  const journals = await getPostedJournals(scopedEntityIds, from, to);
+  const { accounts, accountMap } = await buildAccountMap(scopedEntityIds);
 
   const incomeRows = [];
   const expenseRows = [];
@@ -173,16 +197,18 @@ const calculateProfitAndLoss = async (entityId, from, to) => {
   };
 };
 
-const calculateBalanceSheet = async (entityId, to) => {
+const calculateBalanceSheet = async (entityIds, to) => {
+  const scopedEntityIds = await resolveScopedEntityIds(entityIds);
   const { start, end } = normalizeDateRange(null, to);
+  const ids = toEntityArray(scopedEntityIds);
 
   const journals = await Journal.find({
-    entity: entityId,
+    entity: { $in: ids },
     status: { $in: ["posted", "Posted", "POSTED"] },
     date: { $lte: end },
   }).lean();
 
-  const { accounts, accountMap } = await buildAccountMap(entityId);
+  const { accounts, accountMap } = await buildAccountMap(scopedEntityIds);
 
   const sections = {
     assets: [],
@@ -274,9 +300,10 @@ const calculateBalanceSheet = async (entityId, to) => {
   };
 };
 
-const calculateCashFlowSummary = async (entityId, from, to) => {
-  const journals = await getPostedJournals(entityId, from, to);
-  const { accountMap } = await buildAccountMap(entityId);
+const calculateCashFlowSummary = async (entityIds, from, to) => {
+  const scopedEntityIds = await resolveScopedEntityIds(entityIds);
+  const journals = await getPostedJournals(scopedEntityIds, from, to);
+  const { accountMap } = await buildAccountMap(scopedEntityIds);
 
   let operating = 0;
   let investing = 0;
@@ -312,17 +339,19 @@ const calculateCashFlowSummary = async (entityId, from, to) => {
   };
 };
 
-const getHrSummary = async (entityId, from, to) => {
+const getHrSummary = async (entityIds, from, to) => {
+  const scopedEntityIds = await resolveScopedEntityIds(entityIds);
   const { start, end } = normalizeDateRange(from, to);
+  const ids = toEntityArray(scopedEntityIds);
 
   const [employees, leaveRequests, payrollRuns] = await Promise.all([
-    Employee.find({ entity: entityId }).lean(),
+    Employee.find({ entity: { $in: ids } }).lean(),
     LeaveRequest.find({
-      entity: entityId,
+      entity: { $in: ids },
       createdAt: { $gte: start, $lte: end },
     }).lean(),
     PayrollRun.find({
-      entity: entityId,
+      entity: { $in: ids },
       createdAt: { $gte: start, $lte: end },
     }).lean(),
   ]);

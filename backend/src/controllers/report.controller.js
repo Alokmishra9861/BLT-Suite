@@ -1,14 +1,28 @@
 const reportService = require("../services/report.service");
+const entityService = require("../services/entity.service");
 
-const getEntityId = (req) =>
-  req.entity?._id || req.user?.entity || req.query.entity || req.body.entity;
+/**
+ * Resolve the selected entity ID + all descendant entity IDs
+ * so that reports automatically aggregate across the group.
+ */
+const resolveEntityIds = async (req) => {
+  const entityId = req.entity?._id;
+
+  if (!entityId) return [];
+
+  return entityService.getDescendantEntityIds(entityId);
+};
 
 const getProfitAndLoss = async (req, res, next) => {
   try {
-    const entityId = getEntityId(req);
+    const entityIds = await resolveEntityIds(req);
     const { from, to } = req.query;
 
-    const data = await reportService.calculateProfitAndLoss(entityId, from, to);
+    const data = await reportService.calculateProfitAndLoss(
+      entityIds,
+      from,
+      to,
+    );
 
     res.json({
       success: true,
@@ -21,10 +35,10 @@ const getProfitAndLoss = async (req, res, next) => {
 
 const getBalanceSheet = async (req, res, next) => {
   try {
-    const entityId = getEntityId(req);
+    const entityIds = await resolveEntityIds(req);
     const { to } = req.query;
 
-    const data = await reportService.calculateBalanceSheet(entityId, to);
+    const data = await reportService.calculateBalanceSheet(entityIds, to);
 
     res.json({
       success: true,
@@ -37,11 +51,11 @@ const getBalanceSheet = async (req, res, next) => {
 
 const getCashFlow = async (req, res, next) => {
   try {
-    const entityId = getEntityId(req);
+    const entityIds = await resolveEntityIds(req);
     const { from, to } = req.query;
 
     const data = await reportService.calculateCashFlowSummary(
-      entityId,
+      entityIds,
       from,
       to,
     );
@@ -57,10 +71,10 @@ const getCashFlow = async (req, res, next) => {
 
 const getTrialBalance = async (req, res, next) => {
   try {
-    const entityId = getEntityId(req);
+    const entityIds = await resolveEntityIds(req);
     const { from, to } = req.query;
 
-    const data = await reportService.calculateTrialBalance(entityId, from, to);
+    const data = await reportService.calculateTrialBalance(entityIds, from, to);
 
     res.json({
       success: true,
@@ -73,10 +87,10 @@ const getTrialBalance = async (req, res, next) => {
 
 const getHrSummary = async (req, res, next) => {
   try {
-    const entityId = getEntityId(req);
+    const entityIds = await resolveEntityIds(req);
     const { from, to } = req.query;
 
-    const data = await reportService.getHrSummary(entityId, from, to);
+    const data = await reportService.getHrSummary(entityIds, from, to);
 
     res.json({
       success: true,

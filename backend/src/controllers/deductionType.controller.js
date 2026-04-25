@@ -1,12 +1,14 @@
 const DeductionType = require("../models/DeductionType");
+const {
+  getSelectedEntityId,
+  ensureCanCreateOperationalRecord,
+} = require("../utils/entityScope.util");
 
 // GET /api/deduction-types?entityId=xxx
 exports.getAll = async (req, res, next) => {
   try {
-    const filter = {};
-    if (req.query.entityId) {
-      filter.$or = [{ entityId: req.query.entityId }, { entityId: "all" }];
-    }
+    const entityId = getSelectedEntityId(req);
+    const filter = entityId ? { entityId } : {};
     const types = await DeductionType.find(filter).sort({
       category: 1,
       name: 1,
@@ -20,16 +22,11 @@ exports.getAll = async (req, res, next) => {
 // POST /api/deduction-types
 exports.create = async (req, res, next) => {
   try {
-    const { name, code, category, calcType, value, status, entityId } =
-      req.body;
-    if (
-      !name ||
-      !code ||
-      !category ||
-      !calcType ||
-      value === undefined ||
-      !entityId
-    ) {
+    ensureCanCreateOperationalRecord(req);
+    const { name, code, category, calcType, value, status } = req.body;
+    const entityId = getSelectedEntityId(req);
+
+    if (!name || !code || !category || !calcType || value === undefined) {
       return res
         .status(400)
         .json({ success: false, message: "Missing required fields." });
@@ -52,8 +49,9 @@ exports.create = async (req, res, next) => {
 // PUT /api/deduction-types/:id
 exports.update = async (req, res, next) => {
   try {
-    const type = await DeductionType.findByIdAndUpdate(
-      req.params.id,
+    const entityId = getSelectedEntityId(req);
+    const type = await DeductionType.findOneAndUpdate(
+      { _id: req.params.id, entityId },
       req.body,
       {
         new: true,
@@ -73,7 +71,11 @@ exports.update = async (req, res, next) => {
 // DELETE /api/deduction-types/:id
 exports.remove = async (req, res, next) => {
   try {
-    const type = await DeductionType.findByIdAndDelete(req.params.id);
+    const entityId = getSelectedEntityId(req);
+    const type = await DeductionType.findOneAndDelete({
+      _id: req.params.id,
+      entityId,
+    });
     if (!type)
       return res
         .status(404)

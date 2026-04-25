@@ -1,112 +1,130 @@
-import { createContext, useContext, useState, useEffect } from "react";
-import { getEntities } from "../services/entity.service";
+import { createContext, useContext, useEffect, useState } from "react";
+import { useAuth } from "../hooks/useAuth.js";
+import entityService from "../services/entity.service";
 
 const EntityContext = createContext(null);
 
+const normalizeEntity = (entity) => {
+  if (!entity) return null;
+
+  const id = entity._id || entity.id;
+  if (!id) return null;
+
+  return {
+    ...entity,
+    _id: id,
+  };
+};
+
+const persistSelection = (entity) => {
+  if (!entity?._id) return;
+
+  localStorage.setItem("entityId", entity._id);
+  localStorage.setItem("entityName", entity.name || "");
+  localStorage.setItem("entityType", entity.entityType || "");
+};
+
 export function EntityProvider({ children }) {
+  const { isAuthenticated, loading: authLoading } = useAuth();
   const [entities, setEntities] = useState([]);
-  const [currentEntity, setCurrentEntity] = useState(null);
-  const [loading, setLoading] = useState(true);
+  const [entityTree, setEntityTree] = useState([]);
+  const [selectedEntity, setSelectedEntity] = useState(null);
+  const [loadingEntities, setLoadingEntities] = useState(true);
 
-  // Load entities on mount
-  useEffect(() => {
-    const load = async () => {
-      const token =
-        localStorage.getItem("blt_token") || localStorage.getItem("token");
-      if (!token) {
-        setLoading(false);
-        return;
-      }
-
-      try {
-        const list = (await getEntities()) || [];
-        setEntities(list);
-
-        // Restore previously selected entity from localStorage
-        const savedId = localStorage.getItem("entityId");
-        const saved = savedId ? list.find((e) => e._id === savedId) : null;
-        const active = saved || list[0] || null;
-
-        if (active) {
-          setCurrentEntity(active);
-          localStorage.setItem("entityId", active._id); // ← ensure it's stored
-        }
-      } catch (err) {
-        console.error("Failed to load entities:", err);
-      } finally {
-        setLoading(false);
-      }
-    };
-    load();
-  }, []);
-
-  // Exposed function to refresh entities on demand
-  const fetchEntities = async () => {
+  const loadEntities = async () => {
     try {
-      setLoading(true);
-      const list = (await getEntities()) || [];
-      setEntities(list);
+      setLoadingEntities(true);
 
-      // Keep current selection if possible, otherwise pick first
-      const savedId = localStorage.getItem("entityId");
-      const saved = savedId ? list.find((e) => e._id === savedId) : null;
-      const active = saved || list[0] || null;
+      const [flatEntities, tree] = isAuthenticated
+        ? await Promise.all([
+            entityService.getEntities(),
+            entityService.getEntityTree(),
+          ])
+        : [await entityService.getEntitiesPublic(), []];
 
-      if (active) {
-        setCurrentEntity(active);
-        localStorage.setItem("entityId", active._id);
-      } else {
-        setCurrentEntity(null);
-        localStorage.removeItem("entityId");
+      setEntities(flatEntities);
+      setEntityTree(tree);
+
+      const savedEntityId = localStorage.getItem("entityId");
+
+      if (savedEntityId) {
+        const found = flatEntities.find((item) => item._id === savedEntityId);
+        if (found) {
+          const normalized = normalizeEntity(found);
+          setSelectedEntity(normalized);
+          persistSelection(normalized);
+        } else if (flatEntities[0]) {
+          const normalized = normalizeEntity(flatEntities[0]);
+          setSelectedEntity(normalized);
+          persistSelection(normalized);
+        }
+      } else if (flatEntities[0]) {
+        const normalized = normalizeEntity(flatEntities[0]);
+        setSelectedEntity(normalized);
+        persistSelection(normalized);
       }
-    } catch (err) {
-      console.error("Failed to fetch entities:", err);
+    } catch (error) {
+      console.error("Failed to load entities:", error);
+
+      if (isAuthenticated) {
+        try {
+          const flatEntities = await entityService.getEntitiesPublic();
+          setEntities(flatEntities);
+          setEntityTree([]);
+
+          const savedEntityId = localStorage.getItem("entityId");
+          if (savedEntityId) {
+            const found = flatEntities.find(
+              (item) => item._id === savedEntityId,
+            );
+            if (found) {
+              const normalized = normalizeEntity(found);
+              setSelectedEntity(normalized);
+              persistSelection(normalized);
+            }
+          } else if (flatEntities[0]) {
+            const normalized = normalizeEntity(flatEntities[0]);
+            setSelectedEntity(normalized);
+            persistSelection(normalized);
+          }
+        } catch (fallbackError) {
+          console.error("Failed to load public entities:", fallbackError);
+        }
+      }
     } finally {
-      setLoading(false);
+      setLoadingEntities(false);
     }
   };
 
-  // Persist entity ID whenever it changes
+  const selectEntity = (entity) => {
+    const normalized = normalizeEntity(entity);
+    setSelectedEntity(normalized);
+    persistSelection(normalized);
+  };
+
   useEffect(() => {
-    if (currentEntity?._id) {
-      localStorage.setItem("entityId", currentEntity._id);
-    }
-  }, [currentEntity]);
-
-  const switchEntity = (entityOrId) => {
-    if (!entityOrId) {
-      setCurrentEntity(null);
-      localStorage.removeItem("entityId");
+    if (authLoading) {
       return;
     }
 
-    // Accept either an entity object or an id string
-    if (typeof entityOrId === "string") {
-      const found = entities.find((e) => e._id === entityOrId);
-      if (found) {
-        setCurrentEntity(found);
-        localStorage.setItem("entityId", found._id);
-        return;
-      }
-      // if not found, store id and wait for fetch to populate
-      localStorage.setItem("entityId", entityOrId);
-      setCurrentEntity(null);
-      return;
-    }
+    loadEntities();
+  }, [isAuthenticated, authLoading]);
 
-    setCurrentEntity(entityOrId);
-    if (entityOrId._id) localStorage.setItem("entityId", entityOrId._id);
-  };
+  const currentEntity = selectedEntity;
+  const entityId = selectedEntity?._id || null;
 
   return (
     <EntityContext.Provider
       value={{
         entities,
+        entityTree,
+        selectedEntity,
         currentEntity,
-        entityId: currentEntity?._id || null,
-        switchEntity,
-        loading,
-        fetchEntities,
+        entityId,
+        loadingEntities,
+        loading: loadingEntities,
+        loadEntities,
+        selectEntity,
       }}
     >
       {children}
@@ -115,9 +133,11 @@ export function EntityProvider({ children }) {
 }
 
 export const useEntity = () => {
-  const ctx = useContext(EntityContext);
-  if (!ctx) throw new Error("useEntity must be used inside EntityProvider");
-  return ctx;
+  const context = useContext(EntityContext);
+  if (!context) {
+    throw new Error("useEntity must be used inside EntityProvider");
+  }
+  return context;
 };
 
 export default EntityContext;

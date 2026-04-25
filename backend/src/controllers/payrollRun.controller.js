@@ -4,12 +4,16 @@ const {
   processPayrollRun,
   postPayrollRun,
 } = require("../services/payrollRun.service");
+const {
+  getSelectedEntityId,
+  ensureCanCreateOperationalRecord,
+} = require("../utils/entityScope.util");
 
 // GET /api/payroll-runs?entityId=xxx&status=draft
 exports.getAll = async (req, res, next) => {
   try {
-    const filter = {};
-    if (req.query.entityId) filter.entityId = req.query.entityId;
+    const entityId = getSelectedEntityId(req);
+    const filter = { entityId: String(entityId) };
     if (req.query.status) filter.status = req.query.status;
     const runs = await PayrollRun.find(filter).sort({ periodStart: -1 });
     res.json({ success: true, data: runs });
@@ -21,15 +25,21 @@ exports.getAll = async (req, res, next) => {
 // POST /api/payroll-runs
 exports.create = async (req, res, next) => {
   try {
-    const { entityId, periodType, periodStart, periodEnd, payDate, notes } =
-      req.body;
+    const entityId = getSelectedEntityId(req);
+    if (!entityId) {
+      return res
+        .status(400)
+        .json({ success: false, message: "Entity context is missing." });
+    }
+    ensureCanCreateOperationalRecord(req);
+    const { periodType, periodStart, periodEnd, payDate, notes } = req.body;
     if (!entityId || !periodType || !periodStart || !periodEnd || !payDate) {
       return res
         .status(400)
         .json({ success: false, message: "Missing required fields." });
     }
     const run = await PayrollRun.create({
-      entityId,
+      entityId: String(entityId),
       periodType,
       periodStart,
       periodEnd,
@@ -45,7 +55,13 @@ exports.create = async (req, res, next) => {
 // GET /api/payroll-runs/:id
 exports.getOne = async (req, res, next) => {
   try {
-    const run = await PayrollRun.findById(req.params.id);
+    const entityId = getSelectedEntityId(req);
+    if (!entityId) {
+      return res
+        .status(400)
+        .json({ success: false, message: "Entity context is missing." });
+    }
+    const run = await PayrollRun.findOne({ _id: req.params.id, entityId });
     if (!run)
       return res.status(404).json({ success: false, message: "Not found." });
     res.json({ success: true, data: run });
@@ -57,7 +73,13 @@ exports.getOne = async (req, res, next) => {
 // PUT /api/payroll-runs/:id  (only draft runs)
 exports.update = async (req, res, next) => {
   try {
-    const run = await PayrollRun.findById(req.params.id);
+    const entityId = getSelectedEntityId(req);
+    if (!entityId) {
+      return res
+        .status(400)
+        .json({ success: false, message: "Entity context is missing." });
+    }
+    const run = await PayrollRun.findOne({ _id: req.params.id, entityId });
     if (!run)
       return res.status(404).json({ success: false, message: "Not found." });
     if (run.status !== "draft") {
@@ -76,7 +98,13 @@ exports.update = async (req, res, next) => {
 // DELETE /api/payroll-runs/:id  (only draft runs)
 exports.remove = async (req, res, next) => {
   try {
-    const run = await PayrollRun.findById(req.params.id);
+    const entityId = getSelectedEntityId(req);
+    if (!entityId) {
+      return res
+        .status(400)
+        .json({ success: false, message: "Entity context is missing." });
+    }
+    const run = await PayrollRun.findOne({ _id: req.params.id, entityId });
     if (!run)
       return res.status(404).json({ success: false, message: "Not found." });
     if (run.status !== "draft") {
@@ -95,7 +123,8 @@ exports.remove = async (req, res, next) => {
 // POST /api/payroll-runs/:id/process
 exports.process = async (req, res, next) => {
   try {
-    const run = await processPayrollRun(req.params.id);
+    const entityId = getSelectedEntityId(req);
+    const run = await processPayrollRun(req.params.id, String(entityId));
     res.json({
       success: true,
       data: run,
@@ -109,7 +138,8 @@ exports.process = async (req, res, next) => {
 // POST /api/payroll-runs/:id/post
 exports.post = async (req, res, next) => {
   try {
-    const run = await postPayrollRun(req.params.id);
+    const entityId = getSelectedEntityId(req);
+    const run = await postPayrollRun(req.params.id, String(entityId));
     res.json({
       success: true,
       data: run,
@@ -123,6 +153,15 @@ exports.post = async (req, res, next) => {
 // GET /api/payroll-runs/:id/lines
 exports.getLines = async (req, res, next) => {
   try {
+    const entityId = getSelectedEntityId(req);
+    if (!entityId) {
+      return res
+        .status(400)
+        .json({ success: false, message: "Entity context is missing." });
+    }
+    const run = await PayrollRun.findOne({ _id: req.params.id, entityId });
+    if (!run)
+      return res.status(404).json({ success: false, message: "Not found." });
     const lines = await PayrollLine.find({ payrollRunId: req.params.id })
       .populate("employeeId", "first last title dept paytype")
       .sort({ employeeName: 1 });
@@ -135,7 +174,13 @@ exports.getLines = async (req, res, next) => {
 // GET /api/payroll-runs/:id/summary
 exports.getSummary = async (req, res, next) => {
   try {
-    const run = await PayrollRun.findById(req.params.id);
+    const entityId = getSelectedEntityId(req);
+    if (!entityId) {
+      return res
+        .status(400)
+        .json({ success: false, message: "Entity context is missing." });
+    }
+    const run = await PayrollRun.findOne({ _id: req.params.id, entityId });
     if (!run)
       return res.status(404).json({ success: false, message: "Not found." });
     const lines = await PayrollLine.find({ payrollRunId: req.params.id });

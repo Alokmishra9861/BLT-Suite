@@ -1,9 +1,13 @@
 const BillService = require("../services/bill.service");
 const ApiResponse = require("../utils/ApiResponse");
 const catchAsync = require("../utils/catchAsync");
+const {
+  getSelectedEntityId,
+  ensureCanCreateOperationalRecord,
+} = require("../utils/entityScope.util");
 
 const getBills = catchAsync(async (req, res) => {
-  const { entityId } = req;
+  const entityId = getSelectedEntityId(req);
   const { page, limit, search, status, dateFrom, dateTo } = req.query;
 
   const data = await BillService.getBills(entityId, {
@@ -24,7 +28,8 @@ const getBills = catchAsync(async (req, res) => {
 });
 
 const createBill = catchAsync(async (req, res) => {
-  const { entityId } = req;
+  const entityId = getSelectedEntityId(req);
+  ensureCanCreateOperationalRecord(req);
   const userId = req.user._id || req.user.id;
 
   const bill = await BillService.createBill(entityId, req.body, userId);
@@ -38,7 +43,7 @@ const createBill = catchAsync(async (req, res) => {
 });
 
 const getBill = catchAsync(async (req, res) => {
-  const { entityId } = req;
+  const entityId = getSelectedEntityId(req);
   const { billId } = req.params;
 
   const bill = await BillService.getBillById(billId, entityId);
@@ -52,7 +57,7 @@ const getBill = catchAsync(async (req, res) => {
 });
 
 const updateBill = catchAsync(async (req, res) => {
-  const { entityId } = req;
+  const entityId = getSelectedEntityId(req);
   const { billId } = req.params;
   const userId = req.user._id || req.user.id;
 
@@ -67,7 +72,7 @@ const updateBill = catchAsync(async (req, res) => {
 });
 
 const deleteBill = catchAsync(async (req, res) => {
-  const { entityId } = req;
+  const entityId = getSelectedEntityId(req);
   const { billId } = req.params;
 
   await BillService.deleteBill(billId, entityId);
@@ -81,7 +86,7 @@ const deleteBill = catchAsync(async (req, res) => {
 });
 
 const approveBill = catchAsync(async (req, res) => {
-  const { entityId } = req;
+  const entityId = getSelectedEntityId(req);
   const { billId } = req.params;
 
   const bill = await BillService.approveBill(billId, entityId);
@@ -95,7 +100,7 @@ const approveBill = catchAsync(async (req, res) => {
 });
 
 const voidBill = catchAsync(async (req, res) => {
-  const { entityId } = req;
+  const entityId = getSelectedEntityId(req);
   const { billId } = req.params;
 
   const bill = await BillService.voidBill(billId, entityId);
@@ -109,7 +114,7 @@ const voidBill = catchAsync(async (req, res) => {
 });
 
 const getBillSummary = catchAsync(async (req, res) => {
-  const { entityId } = req;
+  const entityId = getSelectedEntityId(req);
 
   const summary = await BillService.getBillSummary(entityId);
 

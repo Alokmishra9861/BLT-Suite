@@ -2,9 +2,13 @@ const LeaveRequest = require("../models/LeaveRequest");
 const ApiResponse = require("../utils/ApiResponse");
 const catchAsync = require("../utils/catchAsync");
 const ApiError = require("../utils/ApiError");
+const {
+  getSelectedEntityId,
+  ensureCanCreateOperationalRecord,
+} = require("../utils/entityScope.util");
 
 const getLeaveRequests = catchAsync(async (req, res) => {
-  const { entityId } = req.params;
+  const entityId = getSelectedEntityId(req);
   const { page = 1, limit = 10, employeeId, status } = req.query;
 
   const query = { entityId };
@@ -33,7 +37,8 @@ const getLeaveRequests = catchAsync(async (req, res) => {
 });
 
 const createLeaveRequest = catchAsync(async (req, res) => {
-  const { entityId } = req.params;
+  const entityId = getSelectedEntityId(req);
+  ensureCanCreateOperationalRecord(req);
   const leaveRequestData = { ...req.body, entityId };
 
   const leaveRequest = await LeaveRequest.create(leaveRequestData);
@@ -49,9 +54,14 @@ const createLeaveRequest = catchAsync(async (req, res) => {
 
 const updateLeaveRequest = catchAsync(async (req, res) => {
   const { id } = req.params;
-  const leaveRequest = await LeaveRequest.findByIdAndUpdate(id, req.body, {
-    new: true,
-  }).populate("employeeId", "firstName lastName");
+  const entityId = getSelectedEntityId(req);
+  const leaveRequest = await LeaveRequest.findOneAndUpdate(
+    { _id: id, entityId },
+    req.body,
+    {
+      new: true,
+    },
+  ).populate("employeeId", "firstName lastName");
   if (!leaveRequest) throw new ApiError(404, "Leave request not found");
 
   res.status(200).json(
@@ -64,8 +74,9 @@ const updateLeaveRequest = catchAsync(async (req, res) => {
 
 const approveLeaveRequest = catchAsync(async (req, res) => {
   const { id } = req.params;
-  const leaveRequest = await LeaveRequest.findByIdAndUpdate(
-    id,
+  const entityId = getSelectedEntityId(req);
+  const leaveRequest = await LeaveRequest.findOneAndUpdate(
+    { _id: id, entityId },
     { status: "approved" },
     { new: true },
   ).populate("employeeId", "firstName lastName");
@@ -81,8 +92,9 @@ const approveLeaveRequest = catchAsync(async (req, res) => {
 
 const rejectLeaveRequest = catchAsync(async (req, res) => {
   const { id } = req.params;
-  const leaveRequest = await LeaveRequest.findByIdAndUpdate(
-    id,
+  const entityId = getSelectedEntityId(req);
+  const leaveRequest = await LeaveRequest.findOneAndUpdate(
+    { _id: id, entityId },
     { status: "rejected" },
     { new: true },
   ).populate("employeeId", "firstName lastName");
